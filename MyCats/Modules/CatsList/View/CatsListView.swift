@@ -19,7 +19,7 @@ struct CatsListView<ViewModel>: View where ViewModel: CatsListViewModel {
     
     var body: some View {
         switch viewModel.viewState {
-        case .ready, .loadingTag:
+        case .ready, .loadingTags, .loadingMoreCats:
             contentView
         case .loading:
             LoadingView()
@@ -46,6 +46,9 @@ struct CatsListView<ViewModel>: View where ViewModel: CatsListViewModel {
                         }
                     )
                 }
+                
+                LoadingView()
+                    .onAppear { Task { await viewModel.requestMoreCats(filteringByTags: tags) }}
             }
         }
         

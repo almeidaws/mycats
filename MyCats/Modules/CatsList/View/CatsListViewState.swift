@@ -9,7 +9,8 @@ import Foundation
 
 enum CatsListViewState {
     case loading
-    case loadingTag
+    case loadingTags
+    case loadingMoreCats
     case ready
     case error(_ error: Error)
 }

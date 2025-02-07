@@ -13,11 +13,29 @@ fileprivate let catsSkipCount = 0
 class CatsListNetworkViewModel: CatsListViewModel {
     @Published var cats = [CatModel]()
     @Published var viewState: CatsListViewState = .loading
+    private var skipCount = 0
+    
+    @MainActor
+    func requestMoreCats(filteringByTags tags: String?) async {
+        skipCount += catsPageSize
+        do {
+            let cats = try await createCatsRequest(filteringByTags: tags)(catsPageSize, skipCount)
+            let moreCats: [CatModel] = cats.map { .init(
+                id: $0.id,
+                tags: $0.tags,
+                image: nil
+            ) }
+            self.cats.append(contentsOf: moreCats)
+            viewState = .ready
+        } catch {
+            viewState = .error(error)
+        }
+    }
     
     @MainActor
     func requestCats(filteringByTags tags: String? = nil) async {
         do {
-            let cats = try await createCatsRequest(filteringByTags: tags)(catsPageSize, 0)
+            let cats = try await createCatsRequest(filteringByTags: tags)(catsPageSize, skipCount)
             self.cats = cats.map { .init(
                 id: $0.id,
                 tags: $0.tags,
@@ -33,12 +51,20 @@ class CatsListNetworkViewModel: CatsListViewModel {
     private func createCatsRequest(filteringByTags tags: String?) async -> (_ limit: Int, _ skip: Int) async throws -> [CatResponse] {
         if let tags = processTagSearchString(tags: tags) {
             return { (_ limit: Int, _ skip: Int) async throws -> [CatResponse] in
-                self.viewState = .loadingTag
+                if skip > 0 {
+                    self.viewState = .loadingMoreCats
+                } else {
+                    self.viewState = .loadingTags
+                }
                 return try await CATAAS.Service.requestCats(limit: limit, skip: skip, filteringByTags: tags)
             }
         } else {
             return { (_ limit: Int, _ skip: Int) async throws -> [CatResponse] in
-                self.viewState = .loading
+                if skip > 0 {
+                    self.viewState = .loadingMoreCats
+                } else {
+                    self.viewState = .loading
+                }
                 return try await CATAAS.Service.requestCats(limit: limit, skip: skip)
             }
         }
