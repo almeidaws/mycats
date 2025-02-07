@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Combine
 
 fileprivate let catsPageSize = 10
 fileprivate let catsSkipCount = 0
@@ -14,9 +15,34 @@ class CatsListNetworkViewModel: CatsListViewModel {
     @Published var cats = [CatModel]()
     @Published var viewState: CatsListViewState = .loading
     private var skipCount = 0
+    @Published var tagsSearch = ""
+    private var cancellables = Set<AnyCancellable>()
+    
+    init() {
+        $tagsSearch
+            .debounce(for: 1, scheduler: RunLoop.main)
+            .sink { [weak self] _ in
+                guard let self = self else { return }
+                guard !tagsSearch.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+                Task {
+                    debugPrint("Searching \(self.tagsSearch)")
+                    await self.requestCats(filteringByTags: self.tagsSearch)
+                }
+            }
+            .store(in: &cancellables)
+    }
     
     @MainActor
-    func requestMoreCats(filteringByTags tags: String?) async {
+    func requestCats(nextPage: Bool) async {
+        if nextPage {
+            await requestMoreCats(filteringByTags: tagsSearch)
+        } else {
+            await requestCats(filteringByTags: tagsSearch)
+        }
+    }
+    
+    @MainActor
+    private func requestMoreCats(filteringByTags tags: String?) async {
         skipCount += catsPageSize
         do {
             let cats = try await createCatsRequest(filteringByTags: tags)(catsPageSize, skipCount)
@@ -33,7 +59,7 @@ class CatsListNetworkViewModel: CatsListViewModel {
     }
     
     @MainActor
-    func requestCats(filteringByTags tags: String? = nil) async {
+    private func requestCats(filteringByTags tags: String? = nil) async {
         do {
             let cats = try await createCatsRequest(filteringByTags: tags)(catsPageSize, skipCount)
             self.cats = cats.map { .init(

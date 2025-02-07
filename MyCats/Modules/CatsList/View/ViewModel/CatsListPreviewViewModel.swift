@@ -13,9 +13,9 @@ class CatsListPreviewViewModel: CatsListViewModel {
         tags: $0.tags,
         image: nil
     ) }
+    var tagsSearch: String = ""
     var viewState: CatsListViewState = .ready
     
-    func requestCats(filteringByTags tags: String?) async { }
-    func requestMoreCats(filteringByTags tags: String?) async { }
+    func requestCats(nextPage: Bool) async { }
     func requestImage(for cat: CatModel) async { }
 }

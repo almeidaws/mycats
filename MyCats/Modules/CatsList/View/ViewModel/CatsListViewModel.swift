@@ -11,8 +11,8 @@ protocol CatsListViewModel: ObservableObject {
     
     var cats: [CatModel] { get }
     var viewState: CatsListViewState { get }
+    var tagsSearch: String { get set }
     
-    func requestCats(filteringByTags tags: String?) async
-    func requestMoreCats(filteringByTags tags: String?) async
+    func requestCats(nextPage: Bool) async
     func requestImage(for cat: CatModel) async
 }

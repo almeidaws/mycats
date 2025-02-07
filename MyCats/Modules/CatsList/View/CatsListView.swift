@@ -15,7 +15,6 @@ fileprivate let textFieldHintText = "Search cats by tag"
 struct CatsListView<ViewModel>: View where ViewModel: CatsListViewModel {
     
     @StateObject var viewModel: ViewModel
-    @State private var tags = ""
     
     var body: some View {
         switch viewModel.viewState {
@@ -23,17 +22,17 @@ struct CatsListView<ViewModel>: View where ViewModel: CatsListViewModel {
             contentView
         case .loading:
             LoadingView()
-                .onAppear { Task { await viewModel.requestCats(filteringByTags: tags) } }
+                .onAppear { Task { await viewModel.requestCats(nextPage: false) } }
         case .error(let error):
             ErrorView(error: error) {
-                Task { await viewModel.requestCats(filteringByTags: tags) }
+                Task { await viewModel.requestCats(nextPage: false) }
             }
         }
     }
     
     private var contentView: some View {
         VStack {
-            SearchableTextFieldView(title: textFieldHintText, text: $tags)
+            SearchableTextFieldView(title: textFieldHintText, text: $viewModel.tagsSearch)
                 .padding(.horizontal, horizontalPadding)
             
             List {
@@ -47,20 +46,15 @@ struct CatsListView<ViewModel>: View where ViewModel: CatsListViewModel {
                     )
                 }
                 
-                if tags.isEmpty {
+                if viewModel.tagsSearch.isEmpty {
                     LoadingView()
-                        .onAppear { Task { await viewModel.requestMoreCats(filteringByTags: tags) }}
+                        .onAppear { Task { await viewModel.requestCats(nextPage: true) }}
                 }
             }
         }
         .scrollDismissesKeyboard(.interactively)
         .navigationTitle(titleText)
         .navigationBarTitleDisplayMode(.large)
-        .onChange(of: tags) {
-            Task {
-                await viewModel.requestCats(filteringByTags: tags)
-            }
-        }
         
     }
 }
