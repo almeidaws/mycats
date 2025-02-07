@@ -47,11 +47,13 @@ struct CatsListView<ViewModel>: View where ViewModel: CatsListViewModel {
                     )
                 }
                 
-                LoadingView()
-                    .onAppear { Task { await viewModel.requestMoreCats(filteringByTags: tags) }}
+                if tags.isEmpty {
+                    LoadingView()
+                        .onAppear { Task { await viewModel.requestMoreCats(filteringByTags: tags) }}
+                }
             }
         }
-        
+        .scrollDismissesKeyboard(.interactively)
         .navigationTitle(titleText)
         .navigationBarTitleDisplayMode(.large)
         .onChange(of: tags) {
