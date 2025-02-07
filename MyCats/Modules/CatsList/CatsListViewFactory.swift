@@ -9,7 +9,7 @@ import SwiftUI
 
 enum CatsListViewFactory {
     static func build() -> some View {
-        let viewModel = CatsListViewModel(cats: .samples)
+        let viewModel = CatsListNetworkViewModel()
         let view = CatsListView(viewModel: viewModel)
         return view
     }

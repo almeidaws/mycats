@@ -1,0 +1,66 @@
+//
+//  CatsListNetworkViewModel.swift
+//  MyCats
+//
+//  Created by Alma Viva on 06/02/25.
+//
+
+import SwiftUI
+
+fileprivate let catsPageSize = 10
+fileprivate let catsSkipCount = 0
+
+class CatsListNetworkViewModel: CatsListViewModel {
+    @Published var cats = [CatModel]()
+    @Published var viewState: CatsListViewState = .loading
+    
+    @MainActor
+    func requestCats(filteringByTags tags: String? = nil) async {
+        do {
+            let cats = try await createCatsRequest(filteringByTags: tags)(catsPageSize, 0)
+            self.cats = cats.map { .init(
+                id: $0.id,
+                tags: $0.tags,
+                image: nil
+            ) }
+            viewState = .ready
+        } catch {
+            viewState = .error(error)
+        }
+    }
+    
+    @MainActor
+    private func createCatsRequest(filteringByTags tags: String?) async -> (_ limit: Int, _ skip: Int) async throws -> [CatResponse] {
+        if let tags = processTagSearchString(tags: tags) {
+            return { (_ limit: Int, _ skip: Int) async throws -> [CatResponse] in
+                self.viewState = .loadingTag
+                return try await CATAAS.Service.requestCats(limit: limit, skip: skip, filteringByTags: tags)
+            }
+        } else {
+            return { (_ limit: Int, _ skip: Int) async throws -> [CatResponse] in
+                self.viewState = .loading
+                return try await CATAAS.Service.requestCats(limit: limit, skip: skip)
+            }
+        }
+    }
+    
+    private func processTagSearchString(tags: String? = nil) -> [String]? {
+        guard let tags = tags else { return nil }
+        let trimmed = tags.trimmingCharacters(in: .whitespacesAndNewlines)
+        let splitted = trimmed.split(separator: " ")
+        guard !splitted.isEmpty else { return nil }
+        return splitted.map { $0.lowercased() }
+    }
+    
+    @MainActor
+    func requestImage(for cat: CatModel) async {
+        do {
+            let imageData = try await CATAAS.Service.requestImage(catId: cat.id)
+            guard let index = cats.firstIndex(where: { $0.id == cat.id }) else { return }
+            guard let uiImage = UIImage(data: imageData) else { return }
+            cats[index].image = .init(uiImage: uiImage)
+        } catch {
+            debugPrint("An error occured when fething cat's image.")
+        }
+    }
+}

@@ -5,10 +5,10 @@
 //  Created by Alma Viva on 06/02/25.
 //
 
-import Foundation
+import SwiftUI
 
-struct CatModel: Decodable {
+struct CatModel {
     let id: String
     let tags: [String]
-    let createdAt: Date
+    var image: Image?
 }
